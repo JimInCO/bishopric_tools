@@ -74,7 +74,7 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     "bishopric_tools.users.apps.UsersConfig",
     "events.apps.EventsConfig",
-    "people.apps.PeopleConfig",
+    "people",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block css %}
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.css">
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.js"></script>
+  <script>
+$(document).ready(function() {
+    $('#members').DataTable({
+      "lengthMenu": [[15, 25, -1], [15, 25, "All"]]
+    });
+} );
+</script>
+{% endblock %}
+
+{% block content %}
+    <h2>Members</h2>
+    <table id="members" class="display" style="width:100%" data-page-length='15' data-order='[[ 3, "desc"], [0, "asc"]]'>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Adult/Youth</th>
+        <th>Notes</th>
+        <th>Last Date</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for member in object_list %}
+        <tr>
+          <td>
+            <a href="{{ member.get_absolute_url }}">
+              {{ member.full_name }}
+            </a>
+          </td>
+          <td>
+            {% if member.adult %}
+            Adult
+            {% else %}
+            Youth
+            {% endif %}
+          </td>
+          <td>
+            {{ member.notes }}
+          </td>
+          <td>{{ member.last_talk_date|date:"Y-m-d" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+{% endblock %}

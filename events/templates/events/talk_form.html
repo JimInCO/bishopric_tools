@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Add Talk{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.7.1/css/bootstrap-datepicker.standalone.min.css" integrity="sha256-4PQp5wYKIGyIpShGiM2DG3LbiWuMtYl/y+uKY4EHHoc=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+{% endblock %}
+
+{% block javascript %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.7.1/js/bootstrap-datepicker.min.js"
+        integrity="sha256-TueWqYu0G+lYIimeIcMI8x1m14QH/DQVt4s9m/uuhPw="
+        crossorigin="anonymous">
+</script>
+<script>
+$('.dateinput,.fa-calendar').datepicker({
+    format: "dd M yyyy",
+    daysOfWeekDisabled: "1,2,3,4,5,6",
+    maxViewMode: 2,
+    todayBtn: "linked",
+    autoclose: true,
+    todayHighlight: true,
+    toggleActive: true
+});
+</script>
+{% endblock %}
+
+{% block content %}
+  {% crispy form %}
+{% endblock %}

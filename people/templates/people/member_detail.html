@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}{{ object.full_name }}{% endblock %}
+
+{% block content %}
+
+<h4>{{ object.full_name }}</h4><br>
+
+<div class="row">
+  <div class="col-6">
+    <div class="card">
+      <div class="card-header">
+        Contact Information
+      </div>
+      <div class="card-body">
+        {{ object.street1 }}<br>
+        {% if object.street2 %}
+        {{ object.street2 }}<br>
+        {% endif %}
+        Broomfield, CO 80020<br>
+
+      <b>Email:</b> {{ object.email }}<br>
+      <b>Phone:</b> {{ object.phone }}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-6">
+    <div class="card">
+      <div class="card-header">
+        Speaking Information
+      </div>
+      <div class="card-body">
+        <div class="list-group">
+          {% for talk in talks %}
+            <a href="{{ talk.get_absolute_url }}" class="list-group-item list-group-item-action">
+              {{ talk.date|date:"d F Y" }}
+              {% if talk.topic %} - {{ talk.topic }} {% endif %}
+            </a>
+          {% endfor %}
+        </div>
+        <a href="{% url "talks:add" %}?member={{ object.pk }}" class="btn btn-primary">Add Talk</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

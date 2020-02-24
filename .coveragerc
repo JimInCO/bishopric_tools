@@ -1,5 +1,5 @@
 [run]
-include = bishopric_tools/*
+include = bishopric_tools/*, events/*, people/*
 omit = *migrations*, *tests*
 plugins =
     django_coverage_plugin

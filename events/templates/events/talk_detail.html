@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+<img src="{% static 'images/179px-Logo_of_the_Church_of_Jesus_Christ_of_Latter-day_Saints.png' %}" class="center"><br>
+<p class="helv">
+  BROOMFIELD FIRST WARD<br>
+  BOULDER COLORADO STAKE
+</p>
+
+<p>
+  {{ object.created|date:"d F Y" }}
+</p>
+
+<p>
+{{ object.speaker.full_name }}<br>
+{{ object.speaker.street1 }}<br>
+{% if object.speaker.street2 %}
+{{ object.speaker.street2 }}<br>
+{% endif %}
+Broomfield, CO 80020
+</p>
+<br>
+
+<p>
+  <b>Date</b>: {{ object.date|date:"l, F d, Y" }}<br>
+  {% if object.topic  %}
+  <b>Topic</b>: {{ object.topic }}<br>
+  {% endif %}
+  {% if object.time_range  %}
+  <b>Time for your talk</b>: Please prepare to talk for approximately {{ object.time_range }} minutes.<br>
+  {% endif %}
+  {% if object.reference_materials %}
+  <b>Additional References:</b> {{ object.reference_materials }}<br>
+  {% endif %}
+</p>
+
+<p>
+  Sincerely,<br>
+  The Broomfield 1st Ward Bishopric:<br>
+  {{ object.bishopric|linebreaksbr  }}<br>
+</p>
+
+<a class="btn btn-primary" href="{% url 'talks:talk-pdf' id=object.pk%}">PDF</a>
+<a class="btn btn-secondary" href="{% url 'talks:talk-edit' id=object.pk%}">Edit</a>
+
+{% endblock %}
+

@@ -1,0 +1,104 @@
+{% load staticfiles %}
+
+<html lang=en>
+
+<head>
+	<title>{{ object.date|date:"Y-m-d"}} {{ object.speaker.full_name }}</title>
+	<style type="text/css">
+		@page {
+			size: letter;
+			margin: 1in;
+		}
+    .helv {
+      font-family: Helvetica;
+      font-size: 10px;
+      font-style: normal;
+      font-variant: small-caps;
+    }
+    .center {
+      text-align: center;
+    }
+    img {
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      width: 33%;
+    }
+		html, body {
+			font-size: 12pt;
+			line-height: 1.25;
+			font-family: "Times New Roman", Times, serif;
+		}
+		body {
+			text-align: justify;
+			padding: 0 !important;
+       		background: none !important;
+		}
+		h1 {
+			margin-top: 1em;
+			margin-bottom: 0em;
+			page-break-before: auto !important;
+			font-family: inherit !important;
+			font-size: 1.5em;
+		}
+	</style>
+</head>
+<body>
+  <img src="{% static 'images/179px-Logo_of_the_Church_of_Jesus_Christ_of_Latter-day_Saints.png' %}" class="center"><br>
+  <p class="helv">
+    BROOMFIELD FIRST WARD<br>
+    BOULDER COLORADO STAKE
+  </p>
+
+  <p>
+  {{ object.created|date:"d F Y" }}
+  </p>
+
+  <p>
+  {{ object.speaker.full_name }}<br>
+  {{ object.speaker.street1 }}<br>
+  {% if object.speaker.street2 %}
+  {{ object.speaker.street2 }}<br>
+  {% endif %}
+  Broomfield, CO 80020
+  </p>
+
+  <p>
+    Dear {{ object.speaker.formal_name }},
+  </p>
+  <p>
+    The Broomfield First Ward Bishopric appreciates your acceptance of a speaking assignment in Sacrament Meeting.
+    The date and time of the meeting, the time for your talk, and the general topic for the talk are as follows:<br>
+    <b>Date:</b> {{ object.date|date:"l, F d, Y" }}<br>
+    <b>Topic:</b> {{ object.topic }}<br>
+    <b>Time for your talk:</b> Please prepare to talk for approximately {{ object.time_range }} minutes.<br>
+    {% if object.reference_materials %}
+    <b>Additional References:</b> {{ object.reference_materials }}<br>
+    {% endif %}
+  </p>
+
+  <p>
+  We ask that you join us on the stand 5-10 minutes before the meeting begins to help set the tone of
+  quiet reverence appropriate for Sacrament Meeting.
+  </p>
+
+  <p>
+  It is our hope that each sacrament meeting is a spiritual experience for all who attend and is in
+  harmony with the sacred nature of the sacrament. To help achieve this, we have been asked to
+  counsel you as follows: “To teach the doctrines of the gospel, relate faith-promoting experiences,
+  bear witness of divinely revealed truths, and use the scriptures (see D&C 42:12; 52:9). Speakers
+  should teach in a spirit of love after prayerful preparation. They should not speak on subjects that
+  are speculative, controversial, or out of harmony with Church doctrine.”
+  </p>
+
+  <p>
+  If you have any questions or concerns, contact James McDonald at jlmcd76@gmail.com or by
+  phone at (720) 587-9130. Thank you for accepting this speaking assignment. May the sustaining
+  influence of our Heavenly Father be with you as you prepare and deliver your talk.
+  </p>
+
+  Sincerely,<br>
+  The Broomfield 1st Ward Bishopric:<br>
+  {{ object.bishopric|linebreaksbr  }}
+</body>
+</html>

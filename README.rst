@@ -3,6 +3,8 @@ Bishopric Django Tools
 
 A set of tools to automate some of the common Bishopric tasks. Currently focused on organizing talks.
 
+.. image:: https://travis-ci.com/JimInCO/bishopric_tools.svg?branch=master
+    :target: https://travis-ci.com/JimInCO/bishopric_tools
 .. image:: https://img.shields.io/badge/built%20with-Cookiecutter%20Django-ff69b4.svg
      :target: https://github.com/pydanny/cookiecutter-django/
      :alt: Built with Cookiecutter Django

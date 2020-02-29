@@ -5,6 +5,9 @@ ipdb==0.12.3  # https://github.com/gotcha/ipdb
 Sphinx==2.4.0  # https://github.com/sphinx-doc/sphinx
 psycopg2-binary==2.8.4  # https://github.com/psycopg/psycopg2
 
+# Deploy Tools
+Fabric3==1.14.post1  # https://github.com/fabric/fabric
+
 # Testing
 # ------------------------------------------------------------------------------
 mypy==0.761  # https://github.com/python/mypy

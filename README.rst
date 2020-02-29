@@ -98,9 +98,7 @@ For convenience, you can keep your normal user logged in on Chrome and your supe
 Type checks
 ^^^^^^^^^^^
 
-Running type checks with mypy:
-
-::
+Running type checks with mypy::
 
   $ mypy bishopric_tools
 

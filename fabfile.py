@@ -1,11 +1,14 @@
+import os
+import re
 from contextlib import contextmanager
 from functools import wraps
+import random
 
 import environ
 from fabric.api import env, cd, prefix, sudo as _sudo, run as _run, hide, task
 from fabric.colors import yellow, green, blue, red
-from fabric.contrib.files import exists
-from fabric.operations import local
+from fabric.contrib.files import exists, upload_template, append
+from fabric.operations import local, put
 
 REPO_URL = "https://github.com/JimInCO/bishopric_tools.git"
 site_name = "bishopric_tools"
@@ -22,10 +25,39 @@ env.sudo_password = conf("SSH_PASS", None)
 env.forward_agent = True
 env.proj_name = site_name
 env.server_folder = f"/home/{env.user}/{site_name}_django"
+env.proj_path = env.server_folder
 env.site_folder = f"{env.server_folder}/{site_name}"
 env.venv_home = f"{env.server_folder}/envs"
 env.venv_path = f"{env.venv_home}/{venv_name}"
 env.reqs_path = f"{env.site_folder}/requirements/production.txt"
+env.short_desc = "bishopric"
+env.domains = [env.host]
+env.domains_nginx = f"{env.host}"
+
+##################
+# Template setup #
+##################
+
+# Each template gets uploaded at deploy time, only if their
+# contents has changed, in which case, the reload command is
+# also run.
+
+templates = {
+    "nginx": {
+        "local_path": "deploy/nginx.conf",
+        "remote_path": "/etc/nginx/sites-available/%(proj_name)s.conf",
+        "reload_command": "systemctl nginx restart",
+    },
+    "gunicorn": {
+        "local_path": f"deploy/{env.short_desc}.service",
+        "remote_path": f"/etc/systemd/system/{env.short_desc}.service",
+        "reload_command": "systemctl restart gunicorn",
+    },
+    "socket": {
+        "local_path": f"deploy/{env.short_desc}.socket",
+        "remote_path": f"/etc/systemd/system/{env.short_desc}.socket",
+    },
+}
 
 ######################################
 # Context for virtualenv and project #
@@ -106,6 +138,67 @@ def log_call(func):
         return func(*args, **kawrgs)
 
     return logged
+
+
+def get_templates():
+    """
+    Returns each of the templates with env vars injected.
+    """
+    injected = {}
+    for name, data in templates.items():
+        injected[name] = dict([(k, v % env) for k, v in data.items()])
+    return injected
+
+
+def clean_endlines(s):
+    s.replace("\n", "").replace("\r", "").strip()
+    return s
+
+
+def upload_template_and_reload(name, reload=True):
+    """
+    Uploads a template only if it has changed, and if so, reload a
+    related service.
+    """
+    template = get_templates()[name]
+    local_path = template["local_path"]
+    if not os.path.exists(local_path):
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        local_path = os.path.join(project_root, local_path)
+    remote_path = template["remote_path"]
+    reload_command = template.get("reload_command")
+    owner = template.get("owner")
+    mode = template.get("mode")
+    remote_data = ""
+    if exists(remote_path):
+        with hide("stdout"):
+            remote_data = sudo("cat %s" % remote_path, show=False)
+    with open(local_path, "r") as f:
+        local_data = f.read()
+        # Escape all non-string-formatting-placeholder occurrences of '%':
+        local_data = re.sub(r"%(?!\(\w+\)s)", "%%", local_data)
+        if "%(db_pass)s" in local_data:
+            env.db_pass = db_pass()
+        local_data %= env
+
+    if clean_endlines(remote_data) == clean_endlines(local_data):
+        return
+    upload_template(local_path, remote_path, env, use_sudo=True, backup=False)
+    if owner:
+        sudo("chown %s %s" % (owner, remote_path))
+    if mode:
+        sudo("chmod %s %s" % (mode, remote_path))
+    if reload_command and reload:
+        sudo(reload_command)
+
+
+def update_dot_env():
+    append(".env", "DJANGO_DEBUG_FALSE=y")
+    append(".env", f"SITENAME={env.host}")
+    current_contents = run("cat .env")
+    if "DJANGO_SECRET_KEY" not in current_contents:
+        new_secret = "".join(random.SystemRandom().choices("abcdefghijklmnopqrstuvwxyz0123456789", k=50))
+        append(".env", f"DJANGO_SECRET_KEY={new_secret}")
 
 
 def db_pass():
@@ -249,6 +342,12 @@ def create():
         current_commit = local("git log -n 1 --format=%H", capture=True)
         run(f"git reset --hard {current_commit}")
 
+        # Add .env file
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        put(f"{project_root}/.env", ".")
+        sudo(f"chmod 600 .env")
+        update_dot_env()
+
         # Figure out a way if the Database has already been created
         """
         # Create DB and DB user.
@@ -267,6 +366,7 @@ def create():
     # Set up project.
     # upload_template_and_reload("settings")
     with project():
+        # Requirements
         if env.reqs_path:
             pip(f"-r {env.reqs_path}")
         # pip("gunicorn setproctitle south psycopg2 django-compressor python-memcached")
@@ -291,5 +391,9 @@ def create():
         #     python(user_py, show=False)
         #     shadowed = "*" * len(pw)
         #     print_command(user_py.replace("'%s'" % pw, "'%s'" % shadowed))
+    upload_template_and_reload("socket", reload=False)
+    upload_template_and_reload("gunicorn", reload=False)
+    sudo(f"systemctl start {env.short_desc}.socket")
+    sudo(f"systemctl enable {env.short_desc}.socket")
 
     return True

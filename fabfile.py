@@ -29,6 +29,7 @@ env.proj_path = env.server_folder
 env.site_folder = f"{env.server_folder}/{site_name}"
 env.venv_home = f"{env.server_folder}/envs"
 env.venv_path = f"{env.venv_home}/{venv_name}"
+env.manage = f"{env.venv_path}/bin/python {env.site_folder}/manage.py"
 env.reqs_path = f"{env.site_folder}/requirements/production.txt"
 env.short_desc = "bishopric"
 env.domains = [env.host]
@@ -201,6 +202,10 @@ def update_dot_env():
         append(".env", f"DJANGO_SECRET_KEY={new_secret}")
 
 
+def update_static_files():
+    manage("collectstatic --noinput")
+
+
 def db_pass():
     """
     Prompts for the database password if unknown.
@@ -277,11 +282,11 @@ def static():
 
 
 @task
-def manage(command):
+def manage(command, settings="config.settings.production"):
     """
     Runs a Django management command.
     """
-    return run("%s %s" % (env.manage, command))
+    return run(f"{env.manage} {command} --settings {settings}")
 
 
 #########################
@@ -347,6 +352,9 @@ def create():
         put(f"{project_root}/.env", ".")
         sudo(f"chmod 600 .env")
         update_dot_env()
+
+        # Static Files
+        update_static_files()
 
         # Figure out a way if the Database has already been created
         """

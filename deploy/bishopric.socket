@@ -1,0 +1,8 @@
+[Unit]
+Description=%(short_desc)s gunicorn daemon
+
+[Socket]
+ListenStream=/run/%(short_desc)s.sock
+
+[Install]
+WantedBy=sockets.target

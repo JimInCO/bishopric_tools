@@ -6,11 +6,13 @@ After=network.target
 [Service]
 User=web_user
 Group=www-data
-WorkingDirectory=%(proj_path)s
+WorkingDirectory=%(site_folder)s
 ExecStart=%(venv_path)s/bin/gunicorn \
           --access-logfile - \
-          --workers 3 \
+          --workers 2 \
           --bind unix:/run/%(short_desc)s.sock \
+          --log-level info \
+          --error-logfile %(proj_path)s/logs/gunicorn_error.log, --log-file %(proj_path)s/logs/gunicorn.log \
           config.wsgi:application
 
 [Install]

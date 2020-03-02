@@ -307,6 +307,7 @@ def install():
             run("exit")
     sudo("apt-get update -y -q")
     apt("python3-pip python3-dev libpq-dev postgresql postgresql-contrib nginx curl git-all")
+    apt("nodejs npm")
     sudo("pip3 install --upgrade pip")
     sudo("pip3 install virtualenv")
     # apt("git-core nodejs-legacy npm")
@@ -353,6 +354,10 @@ def create():
         sudo(f"chmod 600 .env")
         update_dot_env()
 
+        # Compile and update the js and css files
+        run("npm install")
+        run("npm run build")
+
         # Static Files
         update_static_files()
 
@@ -371,6 +376,7 @@ def create():
         psql(f"ALTER ROLE {env.proj_name} SET timezone TO 'UTC';")
         psql(f"GRANT ALL PRIVILEGES ON DATABASE {env.proj_name} TO {env.proj_name};")
         """
+
     # Set up project.
     # upload_template_and_reload("settings")
     with project():

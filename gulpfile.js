@@ -29,14 +29,14 @@ function pathsConfig(appName) {
   const vendorsRoot = 'node_modules'
 
   return {
-    
+
     bootstrapSass: `${vendorsRoot}/bootstrap/scss`,
     vendorsJs: [
       `${vendorsRoot}/jquery/dist/jquery.slim.js`,
       `${vendorsRoot}/popper.js/dist/umd/popper.js`,
       `${vendorsRoot}/bootstrap/dist/js/bootstrap.js`,
     ],
-    
+
     app: this.app,
     templates: `${this.app}/templates`,
     css: `${this.app}/static/css`,
@@ -67,9 +67,9 @@ function styles() {
   return src(`${paths.sass}/project.scss`)
     .pipe(sass({
       includePaths: [
-        
+
         paths.bootstrapSass,
-        
+
         paths.sass
       ]
     }).on('error', sass.logError))
@@ -129,15 +129,15 @@ function initBrowserSync() {
       ], {
         // https://www.browsersync.io/docs/options/#option-proxy
         proxy: 'localhost:8000'
-        
+
       }
     )
 }
 
 // Watch
 function watchPaths() {
-  watch(`${paths.sass}/*.scss`, styles)
-  watch(`${paths.templates}/**/*.html`).on("change", reload)
+  watch(`${paths.sass}/*.scss`, styles);
+  watch(`${paths.templates}/**/*.html`).on("change", reload);
   watch([`${paths.js}/*.js`, `!${paths.js}/*.min.js`], scripts).on("change", reload)
 }
 
@@ -147,15 +147,15 @@ const generateAssets = parallel(
   scripts,
   vendorScripts,
   imgCompression
-)
+);
 
 // Set up dev environment
 const dev = parallel(
   runServer,
   initBrowserSync,
   watchPaths
-)
+);
 
-exports.default = series(generateAssets, dev)
-exports["generate-assets"] = generateAssets
-exports["dev"] = dev
+exports.default = series(generateAssets, dev);
+exports["generate-assets"] = generateAssets;
+exports["dev"] = dev;

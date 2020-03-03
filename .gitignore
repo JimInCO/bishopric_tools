@@ -115,6 +115,12 @@ build/Release
 # Dependency directories
 node_modules/
 jspm_packages/
+package-lock.json
+
+# Compiled CSS and JS
+project.*css
+vendors.*js
+project.*js
 
 # Typescript v1 declaration files
 typings/

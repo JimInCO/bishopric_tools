@@ -29,10 +29,11 @@ env.proj_path = env.server_folder
 env.site_folder = f"{env.server_folder}/{site_name}"
 env.venv_home = f"{env.server_folder}/envs"
 env.venv_path = f"{env.venv_home}/{venv_name}"
+env.manage = f"{env.venv_path}/bin/python {env.site_folder}/manage.py"
 env.reqs_path = f"{env.site_folder}/requirements/production.txt"
 env.short_desc = "bishopric"
-env.domains = [env.host]
-env.domains_nginx = f"{env.host}"
+env.domains = conf.list("DJANGO_ALLOWED_HOSTS", default=[""])
+env.domains_nginx = " ".join(env.domains)
 
 ##################
 # Template setup #
@@ -46,7 +47,7 @@ templates = {
     "nginx": {
         "local_path": "deploy/nginx.conf",
         "remote_path": "/etc/nginx/sites-available/%(proj_name)s.conf",
-        "reload_command": "systemctl nginx restart",
+        "reload_command": "systemctl restart nginx",
     },
     "gunicorn": {
         "local_path": f"deploy/{env.short_desc}.service",
@@ -201,6 +202,10 @@ def update_dot_env():
         append(".env", f"DJANGO_SECRET_KEY={new_secret}")
 
 
+def update_static_files():
+    manage("collectstatic --noinput")
+
+
 def db_pass():
     """
     Prompts for the database password if unknown.
@@ -260,8 +265,7 @@ def python(code, show=True):
     Runs Python code in the project's virtual environment, with Django loaded.
     """
     setup = "import os; os.environ['DJANGO_SETTINGS_MODULE']='ckiller.settings';import django;django.setup();"
-    full_code = f'python -c "{setup}{code}"'
-    # full_code = 'python -c "%s%s"' % (setup, code.replace("`", "\\\`"))
+    full_code = 'python -c "%s%s"' % (setup, code.replace("`", "\\\`"))  # noqa W605
     with project():
         result = run(full_code, show=False)
         if show:
@@ -277,11 +281,11 @@ def static():
 
 
 @task
-def manage(command):
+def manage(command, settings="config.settings.production"):
     """
     Runs a Django management command.
     """
-    return run("%s %s" % (env.manage, command))
+    return run(f"{env.manage} {command} --settings {settings}")
 
 
 #########################
@@ -302,11 +306,9 @@ def install():
             run("exit")
     sudo("apt-get update -y -q")
     apt("python3-pip python3-dev libpq-dev postgresql postgresql-contrib nginx curl git-all")
+    apt("nodejs npm")
     sudo("pip3 install --upgrade pip")
     sudo("pip3 install virtualenv")
-    # apt("git-core nodejs-legacy npm")
-    # sudo("npm install bower")
-    # sudo("npm install gulp")
 
 
 @task
@@ -348,52 +350,51 @@ def create():
         sudo(f"chmod 600 .env")
         update_dot_env()
 
-        # Figure out a way if the Database has already been created
-        """
-        # Create DB and DB user.
-        pw = db_pass()
-        new_pw = pw.replace("'", "\'")
-        user_sql = f"CREATE USER {env.proj_name} WITH ENCRYPTED PASSWORD '{new_pw}';"
-        psql(user_sql, show=False)
-        shadowed = "*" * len(pw)
-        print_command(user_sql.replace(f"'{pw}'", f"{shadowed}"))
-        psql(f"CREATE DATABASE {env.proj_name} WITH OWNER {env.proj_name};")
-        psql(f"ALTER ROLE {env.proj_name} SET client_encoding TO 'utf8';")
-        psql(f"ALTER ROLE {env.proj_name} SET default_transaction_isolation TO 'read committed';")
-        psql(f"ALTER ROLE {env.proj_name} SET timezone TO 'UTC';")
-        psql(f"GRANT ALL PRIVILEGES ON DATABASE {env.proj_name} TO {env.proj_name};")
-        """
+        # Migrate
+        manage("migrate")
+
+        # Compile and update the js and css files
+        run("npm install")
+        run("npm run build")
+
+        # Static Files
+        update_static_files()
+
+        # Check to see if the database already exists
+        if postgres(f"psql -l | grep {env.proj_name} | wc -l") == 0:
+            # Create DB and DB user.
+            pw = db_pass()
+            new_pw = pw.replace("'", "'")
+            user_sql = f"CREATE USER {env.proj_name} WITH ENCRYPTED PASSWORD '{new_pw}';"
+            psql(user_sql, show=False)
+            shadowed = "*" * len(pw)
+            print_command(user_sql.replace(f"'{pw}'", f"{shadowed}"))
+            psql(f"CREATE DATABASE {env.proj_name} WITH OWNER {env.proj_name};")
+            psql(f"ALTER ROLE {env.proj_name} SET client_encoding TO 'utf8';")
+            psql(f"ALTER ROLE {env.proj_name} SET default_transaction_isolation TO 'read committed';")
+            psql(f"ALTER ROLE {env.proj_name} SET timezone TO 'UTC';")
+            psql(f"GRANT ALL PRIVILEGES ON DATABASE {env.proj_name} TO {env.proj_name};")
+
     # Set up project.
     # upload_template_and_reload("settings")
     with project():
         # Requirements
         if env.reqs_path:
             pip(f"-r {env.reqs_path}")
-        # pip("gunicorn setproctitle south psycopg2 django-compressor python-memcached")
-        # manage("migrate_schemas --shared")
 
-        # python("from django.conf import settings;"
-        #        "from django.contrib.sites.models import Site;"
-        #        "Site.objects.filter(id=settings.SITE_ID).update(domain='%s');"
-        #        % env.domains[0])
-
-        # for domain in env.domains:
-        #     python("from django.contrib.sites.models import Site;"
-        #            "Site.objects.get_or_create(domain='%s');" % domain)
-
-        # if env.admin_pass:
-        #     pw = env.admin_pass
-        #     user_py = ("User = USER_MODEL"
-        #                "u, _ = User.objects.get_or_create(username='admin');"
-        #                "u.is_staff = u.is_superuser = True;"
-        #                "u.set_password('%s');"
-        #                "u.save();" % pw)
-        #     python(user_py, show=False)
-        #     shadowed = "*" * len(pw)
-        #     print_command(user_py.replace("'%s'" % pw, "'%s'" % shadowed))
+    # Gunicorn Templates
     upload_template_and_reload("socket", reload=False)
     upload_template_and_reload("gunicorn", reload=False)
     sudo(f"systemctl start {env.short_desc}.socket")
     sudo(f"systemctl enable {env.short_desc}.socket")
+
+    # Ngnix Template
+    upload_template_and_reload("nginx")
+    nginx_link = f"/etc/nginx/sites-enabled/{env.proj_name}.conf"
+    if not exists(nginx_link):
+        sudo(f"sudo ln -s /etc/nginx/sites-available/{env.proj_name}.conf {nginx_link}")
+
+    # Firewall
+    sudo("ufw allow 'Nginx Full'")
 
     return True

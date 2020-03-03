@@ -350,9 +350,6 @@ def create():
         sudo(f"chmod 600 .env")
         update_dot_env()
 
-        # Migrate
-        manage("migrate")
-
         # Compile and update the js and css files
         run("npm install")
         run("npm run build")
@@ -375,8 +372,10 @@ def create():
             psql(f"ALTER ROLE {env.proj_name} SET timezone TO 'UTC';")
             psql(f"GRANT ALL PRIVILEGES ON DATABASE {env.proj_name} TO {env.proj_name};")
 
+    # Migrate
+    manage("migrate")
+
     # Set up project.
-    # upload_template_and_reload("settings")
     with project():
         # Requirements
         if env.reqs_path:

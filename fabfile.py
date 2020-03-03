@@ -32,8 +32,8 @@ env.venv_path = f"{env.venv_home}/{venv_name}"
 env.manage = f"{env.venv_path}/bin/python {env.site_folder}/manage.py"
 env.reqs_path = f"{env.site_folder}/requirements/production.txt"
 env.short_desc = "bishopric"
-env.domains = [env.host]
-env.domains_nginx = f"{env.host}"
+env.domains = conf.list("DJANGO_ALLOWED_HOSTS", default=[""])
+env.domains_nginx = " ".join(env.domains)
 
 ##################
 # Template setup #
@@ -47,7 +47,7 @@ templates = {
     "nginx": {
         "local_path": "deploy/nginx.conf",
         "remote_path": "/etc/nginx/sites-available/%(proj_name)s.conf",
-        "reload_command": "systemctl nginx restart",
+        "reload_command": "systemctl restart nginx",
     },
     "gunicorn": {
         "local_path": f"deploy/{env.short_desc}.service",
@@ -354,6 +354,9 @@ def create():
         sudo(f"chmod 600 .env")
         update_dot_env()
 
+        # Migrate
+        manage("migrate")
+
         # Compile and update the js and css files
         run("npm install")
         run("npm run build")
@@ -361,7 +364,8 @@ def create():
         # Static Files
         update_static_files()
 
-        # Figure out a way if the Database has already been created
+        # TODO: Figure out a way if the Database has already been created
+
         """
         # Create DB and DB user.
         pw = db_pass()
@@ -383,8 +387,6 @@ def create():
         # Requirements
         if env.reqs_path:
             pip(f"-r {env.reqs_path}")
-        # pip("gunicorn setproctitle south psycopg2 django-compressor python-memcached")
-        # manage("migrate_schemas --shared")
 
         # python("from django.conf import settings;"
         #        "from django.contrib.sites.models import Site;"
@@ -405,9 +407,18 @@ def create():
         #     python(user_py, show=False)
         #     shadowed = "*" * len(pw)
         #     print_command(user_py.replace("'%s'" % pw, "'%s'" % shadowed))
+    # Gunicorn Templates
     upload_template_and_reload("socket", reload=False)
     upload_template_and_reload("gunicorn", reload=False)
     sudo(f"systemctl start {env.short_desc}.socket")
     sudo(f"systemctl enable {env.short_desc}.socket")
 
+    # Ngnix Template
+    upload_template_and_reload("nginx")
+    nginx_link = f"/etc/nginx/sites-enabled/{env.proj_name}.conf"
+    if not exists(nginx_link):
+        sudo(f"sudo ln -s /etc/nginx/sites-available/{env.proj_name}.conf {nginx_link}")
+
+    # Firewall
+    sudo("ufw allow 'Nginx Full'")
     return True

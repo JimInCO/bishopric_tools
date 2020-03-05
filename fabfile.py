@@ -52,7 +52,7 @@ templates = {
     "gunicorn": {
         "local_path": f"deploy/{env.short_desc}.service",
         "remote_path": f"/etc/systemd/system/{env.short_desc}.service",
-        "reload_command": "systemctl restart gunicorn",
+        "reload_command": f"systemctl restart {env.short_desc}",
     },
     "socket": {
         "local_path": f"deploy/{env.short_desc}.socket",
@@ -81,7 +81,7 @@ def project():
     Runs commands within the project's directory.
     """
     with virtualenv():
-        with cd(env.server_folder):
+        with cd(env.site_folder):
             yield
 
 
@@ -107,6 +107,25 @@ def _print(output):
 
 def print_command(command):
     _print(blue("$ ", bold=True) + yellow(command, bold=True) + red(" ->", bold=True))
+
+
+def get_latest_source():
+    """
+    The server will end up with whatever code is currently checked out on your machine (as long as you’ve pushed it up
+    to the server. Another common gotcha!). We reset --hard to that commit, which will blow away any current changes
+    in the server’s code directory.
+    """
+    with cd(env.site_folder):
+        if exists(".git"):
+            run("git fetch")
+        else:
+            run("git init .")
+            run("git config http.sslverify false --local")
+            run(f"git remote add origin {REPO_URL}")
+            run(f"git fetch")
+            run(f"git pull origin master")
+        current_commit = local("git log -n 1 --format=%H", capture=True)
+        run(f"git reset --hard {current_commit}")
 
 
 @task
@@ -264,7 +283,7 @@ def python(code, show=True):
     """
     Runs Python code in the project's virtual environment, with Django loaded.
     """
-    setup = "import os; os.environ['DJANGO_SETTINGS_MODULE']='ckiller.settings';import django;django.setup();"
+    setup = "import os; os.environ['DJANGO_SETTINGS_MODULE']='config.settings.production';import django;django.setup();"
     full_code = 'python -c "%s%s"' % (setup, code.replace("`", "\\\`"))  # noqa W605
     with project():
         result = run(full_code, show=False)
@@ -277,7 +296,7 @@ def static():
     """
     Returns the live STATIC_ROOT directory.
     """
-    return python("from django.conf import settings;" "print settings.STATIC_ROOT", show=False).split("\n")[-1]
+    return python("from django.conf import settings;" "print(settings.STATIC_ROOT)", show=False).split("\n")[-1]
 
 
 @task
@@ -331,27 +350,14 @@ def create():
         if not exists(f"{venv_name}/bin/pip"):
             run(f"virtualenv --python=python3.7 {venv_name}")
 
-    # Get the project repo
     with cd(env.site_folder):
-        if exists(".git"):
-            run("git fetch")
-        else:
-            run("git init .")
-            run("git config http.sslverify false --local")
-            run(f"git remote add origin {REPO_URL}")
-            run(f"git fetch")
-            run(f"git pull origin master")
-        current_commit = local("git log -n 1 --format=%H", capture=True)
-        run(f"git reset --hard {current_commit}")
-
+        # Get the latest source or create a new repo
+        get_latest_source()
         # Add .env file
         project_root = os.path.dirname(os.path.abspath(__file__))
         put(f"{project_root}/.env", ".")
         sudo(f"chmod 600 .env")
         update_dot_env()
-
-        # Migrate
-        manage("migrate")
 
         # Compile and update the js and css files
         run("npm install")
@@ -375,8 +381,10 @@ def create():
             psql(f"ALTER ROLE {env.proj_name} SET timezone TO 'UTC';")
             psql(f"GRANT ALL PRIVILEGES ON DATABASE {env.proj_name} TO {env.proj_name};")
 
+    # Migrate
+    manage("migrate")
+
     # Set up project.
-    # upload_template_and_reload("settings")
     with project():
         # Requirements
         if env.reqs_path:
@@ -396,5 +404,41 @@ def create():
 
     # Firewall
     sudo("ufw allow 'Nginx Full'")
+
+    return True
+
+
+@task
+@log_call
+def deploy():
+    """
+    Deploy latest version of the project.
+    Check out the latest version of the project from version control, install new requirements, migrate the database,
+    collect any new static assets, and restart gunicorn's work processes for the project.
+    """
+
+    with project():
+        # Backup the database
+        backup("last.db")
+        # Backup the static directory
+        static_dir = static()
+        if exists(static_dir):
+            run("tar -cf last.tar %s" % static_dir)
+        # Store the last commit
+        run("git rev-parse HEAD > last.commit")
+
+    # Get the latest version of the code
+    get_latest_source()
+
+    with project():
+        # Update the requirements
+        pip(f"-r {env.reqs_path}")
+        # Migrate the database
+        manage("migrate")
+        # Update the static files
+        update_static_files()
+
+    # Restart gunicorn process
+    sudo(templates["gunicorn"]["reload_command"])
 
     return True

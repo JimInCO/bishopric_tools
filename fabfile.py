@@ -350,10 +350,9 @@ def create():
         if not exists(f"{venv_name}/bin/pip"):
             run(f"virtualenv --python=python3.7 {venv_name}")
 
-    # Get the latest source or create a new repo
-    get_latest_source()
-
     with cd(env.site_folder):
+        # Get the latest source or create a new repo
+        get_latest_source()
         # Add .env file
         project_root = os.path.dirname(os.path.abspath(__file__))
         put(f"{project_root}/.env", ".")
@@ -428,8 +427,10 @@ def deploy():
         # Store the last commit
         run("git rev-parse HEAD > last.commit")
 
-        # Get the latest version of the code
-        get_latest_source()
+    # Get the latest version of the code
+    get_latest_source()
+
+    with project():
         # Update the requirements
         pip(f"-r {env.reqs_path}")
         # Migrate the database

@@ -52,7 +52,7 @@ templates = {
     "gunicorn": {
         "local_path": f"deploy/{env.short_desc}.service",
         "remote_path": f"/etc/systemd/system/{env.short_desc}.service",
-        "reload_command": "systemctl restart gunicorn",
+        "reload_command": f"systemctl restart {env.short_desc}",
     },
     "socket": {
         "local_path": f"deploy/{env.short_desc}.socket",

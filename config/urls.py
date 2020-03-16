@@ -1,3 +1,5 @@
+from ajax_select import urls as ajax_select_urls
+
 from django.conf import settings
 from django.urls import include, path
 from django.conf.urls.static import static
@@ -14,6 +16,8 @@ urlpatterns = [
     # User management
     path("users/", include("bishopric_tools.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
+    # django-ajax-select url
+    path("ajax_select/", include(ajax_select_urls)),
     # Your stuff: custom urls includes go here
     path("members/", include("people.urls")),
     path("talks/", include("events.urls")),

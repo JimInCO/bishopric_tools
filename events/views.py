@@ -1,3 +1,6 @@
+from typing import Any, Dict
+
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from django_xhtml2pdf.views import PdfMixin
 
@@ -15,7 +18,7 @@ class TalkPdfDetail(PdfMixin, TalkDetail):
     template_name = "events/pdf.html"
 
 
-class TalkAdd(CreateView):
+class TalkAdd(LoginRequiredMixin, CreateView):
     model = models.Talk
     form_class = forms.TalkForm
 
@@ -27,16 +30,25 @@ class TalkAdd(CreateView):
         return initial
 
 
-class TalkEdit(UpdateView):
+class TalkEdit(LoginRequiredMixin, UpdateView):
     model = models.Talk
     form_class = forms.TalkForm
     slug_field = "id"
     slug_url_kwarg = "id"
 
-    def get_form_kwargs(self):
+    def get_form_kwargs(self) -> Dict[str, Any]:
         values = super(TalkEdit, self).get_form_kwargs()
         values["button"] = "Update Talk"
         return values
+
+    def get_initial(self) -> Dict[str, Any]:
+        init = super(TalkEdit, self).get_initial()
+        # Copy the dictionary so we don't accidentally change a mutable dict
+        initial = init.copy()
+        # Reformat the date
+        initial["date"] = self.model.date.strftime("%d %b %Y")
+        # Return the initial values
+        return initial
 
 
 class TalkList(ListView):

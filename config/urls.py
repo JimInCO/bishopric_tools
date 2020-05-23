@@ -15,7 +15,8 @@ urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     # User management
     path("users/", include("bishopric_tools.users.urls", namespace="users")),
-    path("accounts/", include("allauth.urls")),
+    # Login
+    path("accounts/", include("django.contrib.auth.urls")),
     # django-ajax-select url
     path("ajax_select/", include(ajax_select_urls)),
     # Your stuff: custom urls includes go here

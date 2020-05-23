@@ -15,7 +15,7 @@ class TalkForm(forms.ModelForm):
     bishopric = forms.CharField(
         label="Bishopric",
         widget=forms.Textarea(attrs={"rows": 4}),
-        initial=models.Talk._meta.get_field("bishopric").default,
+        # initial=models.Talk._meta.get_field("bishopric").default,
         required=True,
     )
     date = forms.DateField(input_formats=["%d %b %Y"],)

@@ -134,7 +134,33 @@ Deployment
 
 The following details how to deploy this application.
 
+Fabric
+^^^^^^
 
+This package uses fabric to automate the creation and updating of the environment on another computer.
+There are currently three fabric commands: create, deploy, and install.
+All linux commands are based on the Debian environment.
+
+Install adds the base system and Python requirements for the linux server.
+
+Create does the following:
+
+- makes a new virtual environment for a project
+- Pulls the project's repo from version control
+- Adds system-level configs for the project
+- Initialises the database with the live host.
+
+Deploy puts latest version of the project on the server by doing the following:
+
+- Check out the latest version of the project from version control
+- Install new requirements
+- Migrate the database
+- Collect any new static assets
+- Restart gunicorn's work processes for the project
+
+Commands for fabric are issued as follows::
+
+    > fab deploy --host <hostname>
 
 
 Custom Bootstrap Compilation

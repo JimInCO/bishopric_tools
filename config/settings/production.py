@@ -108,10 +108,18 @@ LOGGING = {
             "filters": ["require_debug_false"],
             "class": "django.utils.log.AdminEmailHandler",
         },
-        "console": {"level": "DEBUG", "class": "logging.StreamHandler", "formatter": "verbose"},
+        "file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": "/home/web_user/bishopric_tools_django/logs/django.log",
+        },
     },
     "root": {"level": "INFO", "handlers": ["console"]},
     "loggers": {
+        "django": {
+            "level": "INFO",
+            "propagate": True,
+        },
         "django.request": {"handlers": ["mail_admins"], "level": "ERROR", "propagate": True},
         "django.security.DisallowedHost": {
             "level": "ERROR",
